@@ -1,17 +1,12 @@
 # NEXUS-EventModeling
 
-## Sync Contract
-
-The condensed reference sections below (`## Event Modeling` and `## F#`) mirror the full content in `EVENT_MODELING.md` and `FSHARP.md`.
-**When either of those files is updated, update the corresponding section here.**
-
----
+> Sync contract: when `EVENT_MODELING.md` or `FSHARP.md` is updated, update the corresponding condensed section below.
 
 ## Purpose
 
-This is the NEXUS ecosystem-wide base library for Event Modeling in F#. It defines the core types, testing utilities, and conventions used across all NEXUS projects that practice Event Modeling.
+This is the NEXUS ecosystem-wide base library for Event Modeling in F#.
 
-This repo is the source of truth for:
+Source of truth for:
 - The `EventModeling` core library (Actor, Command, Event, View, Slice, Path, Grouping types)
 - The `EventModeling.Testing` utility library (GWT test adapters, grouping test runner)
 - The canonical example domain (card game) that exercises the full model
@@ -22,12 +17,6 @@ This repo is the source of truth for:
 - **Test framework**: Expecto
 - **Solution**: `EventModeling.slnx`
 
-## Before Any Design or Programming Discussion
-
-Read `EVENT_MODELING.md` — it defines the methodology, vocabulary, and mental model. Every design decision in this codebase is grounded in that document.
-
-Read `FSHARP.md` — it captures F# patterns, Scott Wlaschin's teachings, and accumulated learnings specific to this codebase.
-
 ## Project Layout
 
 ```
@@ -35,24 +24,6 @@ EventModeling/           Core library — domain types only
 EventModeling.Testing/   Test utility library — GWT adapters + grouping runner
 EventModeling.Tests/     Executable test suite — card game example domain
 ```
-
-## Key Principles
-
-- All time values are `DateTimeOffset` in UTC. `OccurredAt` on events is always UTC. Timezone conversion belongs in the view/presentation layer only.
-- Slices are independent and immutable once finalized. No shared logic between slices.
-- GWT example data IS the test suite. Model and tests are the same artifact.
-- Handlers are pure functions. No side effects, no I/O, no state.
-- `SliceRef` decouples the Grouping/Path hierarchy from the internal generic types of each slice.
-
-## F# Conventions
-
-- Compile order in `.fsproj` matters — types must be defined before they are used.
-- Prefer discriminated unions over enums for domain concepts (see `ActorKind`, `Grouping`, `SliceRef`).
-- Use F# records for all data types — immutable by default.
-- `Result<'T, string>` for CommandHandler failures — the string is a business rule violation message.
-- `Map` (F# immutable map) is the correct type for `SliceRegistry`.
-
----
 
 ## Event Modeling
 
@@ -73,10 +44,10 @@ EventModeling.Tests/     Executable test suite — card game example domain
 - **Area**: top-level grouping of related Workflows
 - Groupings are header rows above the grid — purely organizational, no logic
 - **Slice immutability**: finalized slices are replaced, never modified; no code shared between slices
+- `SliceRef` decouples the Grouping/Path hierarchy from the internal generic types of each slice
 - **Conway's Law**: event rows can mirror team/system/bounded-context boundaries
 - Handlers are hidden; GWT is visible — GWT rows are the specification handlers implement
-
----
+- Handlers are pure functions — no side effects, no I/O, no state
 
 ## F#
 
@@ -87,6 +58,7 @@ EventModeling.Tests/     Executable test suite — card game example domain
 - Use discriminated unions instead of strings/bools/ints for domain concepts
 - Total functions: if a function can fail, encode it in the return type (`Result`, `option`) — never throw for domain failures
 - Parse, don't validate: validate at the boundary; inside the domain everything is already valid by construction
+- Use records for all data types — immutable by default
 - Compose functions; F# has no data inheritance
 
 **Compiler rules**
@@ -101,6 +73,7 @@ EventModeling.Tests/     Executable test suite — card game example domain
 - Use `DateTimeOffset.MinValue` as sentinel in GWT example data (runtime timestamp is not part of the spec)
 - Test adapters strip `OccurredAt` before comparing events — only `Name` and `Data` are asserted
 - `Result<'T, string>` for CommandHandler failures; the string is a business rule violation message
+- `Map` (F# immutable map) is the correct type for `SliceRegistry`
 - Single-case DUs wrap primitives to prevent mixing incompatible IDs (e.g. `CustomerId of int`)
 
 **Expecto**
