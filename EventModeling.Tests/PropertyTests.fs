@@ -11,34 +11,36 @@ let allPropertyTests =
     testList "Properties" [
 
         // ─── Hedgehog ─────────────────────────────────────────────────────────
+        // property { let! x = gen; return bool } uses BindReturn → Property<bool>
+        // use Property.checkBool, not Property.check
 
         testCase "actor kind covers all cases" <| fun () ->
-            Property.check <| property {
+            Property.checkBool <| property {
                 let! kind = actorKind
-                let valid =
+                return
                     match kind with
                     | Human _          -> true
                     | Automation _     -> true
                     | ExternalSystem _ -> true
-                return valid
             }
 
         testCase "event preserves name and data" <| fun () ->
-            Property.check <| property {
-                let! ev = event (Gen.int (Range.linear 0 1000))
+            Property.checkBool <| property {
+                let! ev = event (Gen.int32 (Range.linear 0 1000))
                 return ev.Name <> "" && ev.Data >= 0
             }
 
         testCase "command carries actor identity" <| fun () ->
-            Property.check <| property {
-                let! cmd = command actor (Gen.int (Range.linear 0 100))
+            Property.checkBool <| property {
+                let! cmd = command actor (Gen.int32 (Range.linear 0 100))
                 return cmd.IssuedBy.Name <> ""
             }
 
         // ─── CsCheck ──────────────────────────────────────────────────────────
+        // Sample is a static method on Check, not on Gen<T>
 
         testCase "event data roundtrips through record" <| fun () ->
-            Gen.Int.[0, 1000].Sample(fun n ->
+            Check.Sample(Gen.Int.[0, 1000], fun n ->
                 let ev : Event<int> = { Name = "E"; OccurredAt = DateTimeOffset.MinValue; Data = n }
                 if ev.Data <> n then failtest $"Data mismatch: expected {n}, got {ev.Data}"
             )
