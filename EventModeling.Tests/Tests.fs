@@ -6,71 +6,65 @@ open EventModeling
 open EventModeling.Testing.Assert
 open EventModeling.Testing.GroupingRunner
 
-// ─── Sample domain types ─────────────────────────────────────────────────────
-// Minimal card game types used to exercise the GWT adapter.
+// ─── Abstract framework types ─────────────────────────────────────────────────
+// No domain meaning. These exist only to exercise the framework plumbing.
 
-type CardDrawn     = { Card: string; DrawnBy: string }
-type DrawCard      = { PlayerName: string }
-type DeckShuffled  = { ShuffledWithSeed: int }
-type ShuffleDeck   = { RequestedSeed: int }
-type HandCriteria  = { PlayerName: string }
-type HandView      = { Cards: string list }
+type FxState   = { N: int }
+type FxCommand = { N: int }
+type FxEvent   = { N: int }
+type FxCrit    = { Min: int }
+type FxView    = { Items: int list }
 
-// ─── Actors ──────────────────────────────────────────────────────────────────
+// ─── Actors ───────────────────────────────────────────────────────────────────
 
-let dealer = { Name = "Dealer"; Kind = Automation "dealer"; Swimlane = None }
-let player1 = { Name = "Player 1"; Kind = Human "player"; Swimlane = Some "Players" }
+let system1 = { Name = "System"; Kind = Automation "system"; Swimlane = None }
+let user1   = { Name = "User";   Kind = Human "user";        Swimlane = None }
 
-// ─── Sample CommandSlice — Shuffle Deck ──────────────────────────────────────
+// ─── CommandSlice ─────────────────────────────────────────────────────────────
 
-let shuffleDeckSlice : CommandSlice<Actor, DeckShuffled, ShuffleDeck, DeckShuffled> =
-    let handler (given: Event<DeckShuffled> list) (cmd: Command<ShuffleDeck>) =
-        Ok [ { Name = "DeckShuffled"; OccurredAt = DateTimeOffset.UtcNow; Data = { ShuffledWithSeed = cmd.Data.RequestedSeed } } ]
+let commandSlice : CommandSlice<Actor, FxState, FxCommand, FxEvent> =
+    let handler (_given: Event<FxState> list) (cmd: Command<FxCommand>) =
+        Ok [ { Name = "FxEvent"; OccurredAt = DateTimeOffset.UtcNow; Data = { N = cmd.Data.N } } ]
 
-    { Actor   = dealer
-      Command = { Name = "ShuffleDeck"; IssuedBy = dealer; Data = { RequestedSeed = 42 } }
+    { Actor   = system1
+      Command = { Name = "FxCommand"; IssuedBy = system1; Data = { N = 1 } }
       Handler = handler
       GWT =
         { Given = []
-          When  = { Name = "ShuffleDeck"; IssuedBy = dealer; Data = { RequestedSeed = 42 } }
-          Then  = [ { Name = "DeckShuffled"; OccurredAt = DateTimeOffset.MinValue; Data = { ShuffledWithSeed = 42 } } ] } }
+          When  = { Name = "FxCommand"; IssuedBy = system1; Data = { N = 1 } }
+          Then  = [ { Name = "FxEvent"; OccurredAt = DateTimeOffset.MinValue; Data = { N = 1 } } ] } }
 
-// ─── Sample ViewSlice — Player Views Hand ────────────────────────────────────
+// ─── ViewSlice ────────────────────────────────────────────────────────────────
 
-let playerHandSlice : ViewSlice<CardDrawn, HandCriteria, HandView, Actor> =
-    let handler (events: Event<CardDrawn> list) (criteria: HandCriteria) =
-        let cards =
-            events
-            |> List.filter (fun e -> e.Data.DrawnBy = criteria.PlayerName)
-            |> List.map (fun e -> e.Data.Card)
-        { Name = "PlayerHand"; Data = { Cards = cards } }
+let viewSlice : ViewSlice<FxEvent, FxCrit, FxView, Actor> =
+    let handler (events: Event<FxEvent> list) (crit: FxCrit) =
+        let items = events |> List.map (fun e -> e.Data.N) |> List.filter (fun n -> n >= crit.Min)
+        { Name = "FxView"; Data = { Items = items } }
 
-    let drawnEvent card = { Name = "CardDrawn"; OccurredAt = DateTimeOffset.MinValue; Data = { Card = card; DrawnBy = "Player 1" } }
+    let ev n = { Name = "FxEvent"; OccurredAt = DateTimeOffset.MinValue; Data = { N = n } }
 
     { Events  = []
-      View    = { Name = "PlayerHand"; Data = { Cards = [] } }
+      View    = { Name = "FxView"; Data = { Items = [] } }
       Handler = handler
       GWT =
-        { Given = [ drawnEvent "Ace of Spades"; drawnEvent "King of Hearts" ]
-          When  = { PlayerName = "Player 1" }
-          Then  = { Name = "PlayerHand"; Data = { Cards = [ "Ace of Spades"; "King of Hearts" ] } } }
-      Actor   = player1 }
+        { Given = [ ev 1; ev 2; ev 3 ]
+          When  = { Min = 2 }
+          Then  = { Name = "FxView"; Data = { Items = [ 2; 3 ] } } }
+      Actor   = user1 }
 
-// ─── Registry and Grouping ───────────────────────────────────────────────────
+// ─── Registry and Grouping ────────────────────────────────────────────────────
 
-let shuffleRef = CommandRef("ShuffleDeck", dealer)
-let handRef    = ViewRef("PlayerHand", player1)
+let cmdRef  = CommandRef("FxCommand", system1)
+let viewRef = ViewRef("FxView", user1)
 
 let registry : SliceRegistry =
-    [ shuffleRef, CommandEntry (commandSliceToTest "shuffle deck"      shuffleDeckSlice)
-      handRef,    ViewEntry    (viewSliceToTest    "player views hand"  playerHandSlice) ]
+    [ cmdRef,  CommandEntry (commandSliceToTest "command handler produces event" commandSlice)
+      viewRef, ViewEntry    (viewSliceToTest    "view handler filters by min"   viewSlice) ]
     |> Map.ofList
 
-let cardGameGrouping =
-    Area("Card Game",
-        [ Workflow("Setup",
-            [ Flow("Deal", [ shuffleRef ]) ])
-          Workflow("Gameplay",
-            [ Flow("Hand", [ handRef ]) ]) ])
+let frameworkGrouping =
+    Area("EventModeling.Framework",
+        [ Workflow("CommandSlice", [ Flow("GWT", [ cmdRef  ]) ])
+          Workflow("ViewSlice",    [ Flow("GWT", [ viewRef ]) ]) ])
 
-let allTests = groupingToTest registry cardGameGrouping
+let allTests = groupingToTest registry frameworkGrouping

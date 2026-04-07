@@ -9,7 +9,6 @@ This is the NEXUS ecosystem-wide base library for Event Modeling in F#.
 Source of truth for:
 - The `EventModeling` core library (Actor, Command, Event, View, Slice, Path, Grouping types)
 - The `EventModeling.Testing` utility library (GWT test adapters, grouping test runner)
-- The canonical example domain (card game) that exercises the full model
 
 ## Stack
 
@@ -22,7 +21,7 @@ Source of truth for:
 ```
 EventModeling/           Core library — domain types only
 EventModeling.Testing/   Test utility library — GWT adapters + grouping runner
-EventModeling.Tests/     Executable test suite — card game example domain
+EventModeling.Tests/     Framework validation tests — abstract types, no domain
 ```
 
 ## Event Modeling
