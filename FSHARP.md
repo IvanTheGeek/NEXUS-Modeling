@@ -1,3 +1,5 @@
+> **Sync contract**: A condensed version of this document lives in `CLAUDE.md` under `## F#`. When this file is updated, update that section too.
+
 # F# Notes — Patterns, Learnings, and Scott Wlaschin's Influence
 
 This file is a living document. Add to it whenever you encounter a meaningful F# error, learn a pattern, or encounter a nuance that isn't obvious. It is read before any F# design or programming work in this repo.

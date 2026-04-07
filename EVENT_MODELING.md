@@ -1,3 +1,5 @@
+> **Sync contract**: A condensed version of this document lives in `CLAUDE.md` under `## Event Modeling`. When this file is updated, update that section too.
+
 # Event Modeling
 
 ## Overview
